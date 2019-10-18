@@ -14,11 +14,11 @@ def root():
 @app.route('/api/v1/municipio/data' , methods=['GET'])
 def municipio_data():
   mun = request.args.get('mun' , type=str)
-  mun = mun[0]
+  mun = mun
   ano = request.args.get('ano',type=int)
-  ano = ano[0]
+  ano = ano
   col = request.args.get('col', type=str)
-  col = col[0]
+  col = col
 
   response = {col : ap.get_data(mun, col, ano)}
  
