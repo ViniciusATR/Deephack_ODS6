@@ -9,22 +9,25 @@ from sklearn.cluster import KMeans
 from sklearn import preprocessing
 from sklearn.metrics import silhouette_score , davies_bouldin_score
 
+# TODO: tratamento de erros para todas as funções
 
 
+# Leitura de base de dados prórpias e tratadas
 d14 = pd.read_csv('datasets/data2014.csv',sep=';')
 d15 = pd.read_csv('datasets/data2015.csv',sep=';')
 d16 = pd.read_csv('datasets/data2016.csv',sep=';')
 d17 = pd.read_csv('datasets/data2017.csv',sep=';')
-#snsi3 = pd.read_excel('SNSI3.xlsx')
 
-
+# Ajuste de colunas
 d14.drop(columns=['Unnamed: 0','index'] , inplace=True)
 d15.drop(columns=['Unnamed: 0','index'] , inplace=True)
 d16.drop(columns=['Unnamed: 0','index'] , inplace=True)
 d17.drop(columns=['Unnamed: 0','index'] , inplace=True)
 
+# Leitura da base de dados não tratada do SNIS
 df = pd.read_csv(filepath_or_buffer='datasets/Desagregado-20191010161139.csv' ,index_col=False, sep=';' , encoding='utf_16_le', thousands='.' ,decimal=',' , skipfooter=1)
-df.columns
+
+#Renomeação e reestruturação das colunas da base de dados do SNIS
 df.rename(columns={'Município' : 'municipio' 
                   ,'Ano de Referência':'ano' 
                   ,'Código do Município' : 'Cod_ibge' 
@@ -56,10 +59,14 @@ ind_dict = {
 }
 
 df = df.rename(columns = ind_dict)
+
+# Leitura da base de dados contendo dados geográficos para criação de mapas
 map_df = gpd.read_file('datasets/map/LimiteMunicipalPolygon.shp')
 map_df = map_df.rename(columns={'Nome' : 'municipio'})
 
 
+# Dado um ano e uma coluna busca nas tabelas tratadas a criação de um mapa
+# a coluna deve conter uma variável numérica
 def plot_numerical_map(ano, column):
     
     if (ano == 2014):
@@ -93,7 +100,8 @@ def plot_numerical_map(ano, column):
     bytes_image.seek(0)
     return bytes_image
 
-
+# Dado um ano e uma coluna busca nas tabelas tratadas a criação de um mapa
+# a coluna deve conter uma variável qualitativa
 def plot_qualitative_map(ano,column):
     if (ano == 2014):
       data = d14
@@ -121,7 +129,7 @@ def plot_qualitative_map(ano,column):
     bytes_image.seek(0)
     return bytes_image
 
-
+#listas das colunas em cada base de dados
 desag_l = ['AG006', 'AG011', 'AG018',
        'AG021', 'ES009', 'FN006', 'FN033', 'FN048', 'FN058', 'IN023', 'IN024',
        'IN046', 'IN049', 'IN055', 'IN056', 'IN075', 'IN076', 'IN079', 'IN080',
@@ -133,7 +141,7 @@ tce_l = ['SNSI4', 'SNSI1', 'SNSI2', 'SNSI5',
        'TCE20', 'TCE21', 'TCE22', 'TCE23', 'TCE24', 'TCE25', 'TCE26', 'TCE28',
        'TCE29']
 
-
+# plota um gráfico de evolução histórica para variável escolhida de um determinado municipio
 def get_history(mun, col):
     mun_tmp = df[['municipio','ano',col]].groupby(['municipio','ano']).sum()
     mun_tmp = mun_tmp.loc[(mun)].reset_index()
@@ -151,6 +159,7 @@ def get_history(mun, col):
     bytes_image.seek(0)
     return bytes_image
 
+# plota a evolução histórica de uma variável para todo o Estado
 def get_mean_history(col):
     df_tmp = df[['ano',col]].groupby(['ano']).mean()
     df_tmp = df_tmp.reset_index()
@@ -168,7 +177,7 @@ def get_mean_history(col):
     bytes_image.seek(0)
     return bytes_image
 
-
+# retorna um dado individual
 def get_data(mun, col, ano):
   if col in tce_l:
     if ano == 2014:
@@ -191,6 +200,7 @@ def get_data(mun, col, ano):
   else:
     return data
 
+# retorna a média do Estado de um dado individual, somente por ano
 def get_mean(col, ano):
   if col in tce_l:
     if ano == 2014:
@@ -204,6 +214,8 @@ def get_mean(col, ano):
   else:
     return float(df.loc[(df.ano == ano),col].mean())
 
+# realiza a clusterização utilizando as variáveis fornecidas, como ano, indicadores e número de clusters
+# após isso retorna um conjunto de estatísticas avaliativas sobre os conjuntos
 def cluster(ano, vals , n):
     if (ano == 2014):
         data = d14
@@ -232,6 +244,8 @@ def cluster(ano, vals , n):
     df_c['labels'] = labels
     return (df_c , silhouette_score(train, labels, metric='euclidean'),davies_bouldin_score(train,labels))
 
+# realiza a clusterização utilizando as variáveis fornecidas, como ano, indicadores e número de clusters
+# após isso retorna um mapa colorido com as classes geradas
 def plot_cluster_map(ano,vals,n):
     data = cluster(ano,vals,n)[0]
 
@@ -253,6 +267,8 @@ def plot_cluster_map(ano,vals,n):
     bytes_image.seek(0)
     return bytes_image
 
+# realiza a clusterização utilizando as variáveis fornecidas, como ano, indicadores e número de clusters
+# após isso retorna um conjunto de gráficos de dispersão e de densidades de distribuição
 def plot_cluster(ano, vals, n):
   data = cluster(ano,vals,n)[0]
   fig = sns.pairplot(data,hue='labels',diag_kind='kde',vars=vals)
